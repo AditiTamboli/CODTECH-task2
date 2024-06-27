@@ -1,0 +1,73 @@
+//TESTBENCH CODE OF SPI
+module tb_spi;
+    reg clk;
+    reg rst;
+    reg start;
+    reg [7:0] master_data;
+    reg [7:0] slave_data;
+    wire sclk;
+    wire mosi;
+    wire miso;
+    wire ss;
+    wire [7:0] master_data_out;
+    wire [7:0] slave_data_out;
+    wire done;
+
+    // Instantiate SPI Master
+    spi_master master (
+        .clk(clk),
+        .rst(rst),
+        .start(start),
+        .data_in(master_data),
+        .sclk(sclk),
+        .mosi(mosi),
+        .miso(miso),
+        .ss(ss),
+        .data_out(master_data_out),
+        .done(done)
+    );
+
+    // Instantiate SPI Slave
+    spi_slave slave (
+        .clk(clk),
+        .rst(rst),
+        .sclk(sclk),
+        .mosi(mosi),
+        .miso(miso),
+        .ss(ss),
+        .data_out(slave_data_out),
+        .data_in(slave_data)
+    );
+
+    // Generate system clock
+    always #5 clk = ~clk;
+
+    initial begin
+      $dumpfile("spitest.vcd");
+      $dumpvars(1);
+        // Initialize signals
+        clk = 0;
+        rst = 1;
+        start = 0;
+        master_data = 8'b10101010;
+        slave_data = 8'b11001100;
+
+        // Release reset
+        #10 rst = 0;
+
+        // Start SPI transaction
+        #20 start = 1;
+        #10 start = 0;
+
+        // Wait for transaction to complete
+        wait (done);
+
+        // Check results
+        #10;
+        $display("Master Data Out: %b", master_data_out);
+        $display("Slave Data Out: %b", slave_data_out);
+
+        $finish;
+    end
+
+endmodule
