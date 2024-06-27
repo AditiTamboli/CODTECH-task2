@@ -1,0 +1,54 @@
+//VERILOG CODE 
+module spi_master (
+    input wire clk,              // System clock
+    input wire rst,              // Reset signal
+    input wire start,            // Start signal for SPI transaction
+    input wire [7:0] data_in,    // Data to be sent to the slave
+    output reg sclk,             // SPI clock
+    output reg mosi,             // Master Out Slave In
+    input wire miso,             // Master In Slave Out
+    output reg ss,               // Slave Select
+    output reg [7:0] data_out,   // Data received from the slave
+    output reg done              // SPI transaction complete signal
+);
+
+    reg [2:0] bit_cnt;           // Bit counter
+    reg [7:0] shift_reg;         // Shift register for transmitting data
+
+    // SPI clock generation (divide system clock)
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin
+            sclk <= 0;
+        end else begin
+            sclk <= ~sclk;
+        end
+    end
+
+    // SPI state machine
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin
+            ss <= 1;
+            done <= 0;
+            bit_cnt <= 0;
+            shift_reg <= 0;
+        end else if (start) begin
+            ss <= 0; // Select the slave
+            done <= 0;
+            bit_cnt <= 0;
+            shift_reg <= data_in;
+        end else if (!ss) begin
+            if (sclk) begin
+                mosi <= shift_reg[7];     // Send MSB first
+                shift_reg <= {shift_reg[6:0], miso}; // Shift in data from MISO
+                bit_cnt <= bit_cnt + 1;
+                if (bit_cnt == 7) begin
+                    ss <= 1;              // Deselect the slave after 8 bits
+                    done <= 1;            // Indicate transaction complete
+                    data_out <= shift_reg; // Store received data
+                end
+            end
+        end
+    end
+
+endmodule
+
